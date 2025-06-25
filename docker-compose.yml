@@ -1,0 +1,53 @@
+services:
+  # Combined development and build service
+  nextapp:
+    build:
+      context: .
+      target: development
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - ./src/openapi/generated:/app/src/openapi/generated
+      - ./src/openapi/model:/app/src/openapi/model
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+      - WATCHPACK_POLLING=true
+    # Install dependencies, run Orval, then lint and format, and finally start the dev server
+    command: >
+      sh -c "pnpm install &&
+             pnpm run generate:orval &&
+             pnpm run lint &&
+             pnpm run format &&
+             pnpm dev --turbopack"
+    stdin_open: true
+    tty: true
+
+  # Add a profile for building the application (same container, different command)
+  build:
+    build:
+      context: .
+      target: development # Using the same image as dev environment
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    command: pnpm run build
+    profiles:
+      - build
+
+  # Production service for testing production builds
+  production:
+    build:
+      context: .
+      target: production
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+    profiles:
+      - prod

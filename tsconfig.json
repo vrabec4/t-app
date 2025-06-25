@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "baseUrl": ".",
+    "target": "es6",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -13,15 +14,41 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "noUncheckedIndexedAccess": true,
+    "types": ["vitest", "node"],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": ["src/*"],
+      "@components": ["src/components"],
+      "@components/*": ["src/components/*"],
+      "@ui": ["src/components/ui"],
+      "@ui/*": ["src/components/ui/*"],
+      "@providers": ["src/providers"],
+      "@providers/*": ["src/providers/*"],
+      "@shared": ["src/components/shared"],
+      "@shared/*": ["src/components/shared/*"],
+      "@lib": ["src/lib"],
+      "@lib/*": ["src/lib/*"],
+      "@hooks": ["src/hooks"],
+      "@hooks/*": ["src/hooks/*"],
+      "@utils": ["src/lib/utils"],
+      "@utils/*": ["src/lib/utils/*"],
+      "@openapi": ["src/openapi"],
+      "@openapi/*": ["src/openapi/*"],
+      "@model": ["src/openapi/model"],
+      "@model/*": ["src/openapi/model/*"],
+      "@test": ["src/test"],
+      "@test/*": ["src/test/*"],
+      "@app/*": ["src/app/*"]
+    },
+    "forceConsistentCasingInFileNames": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", ".pnpm-store"]
 }
