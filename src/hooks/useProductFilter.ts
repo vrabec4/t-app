@@ -5,6 +5,8 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useDebounce } from '@/hooks';
 import { Product } from '@/openapi/model/product';
 
+import { useURLState } from '@/hooks/useURLState';
+
 export type SortOption =
   | 'default'
   | 'price-low'
@@ -12,41 +14,17 @@ export type SortOption =
   | 'name-asc'
   | 'name-desc';
 
-type Props = {
+type UseProductFilterProps = {
   products: Product[] | undefined;
   debounceMs?: number;
 };
 
-type UseProductFilter = {
-  filteredProducts: Product[];
-  minPrice: number;
-  maxPrice: number;
-  isFiltered: boolean;
-  sortBy: SortOption;
-  sliderValues: [number, number];
-  minInput: string;
-  maxInput: string;
-  mobileMinInput: string;
-  mobileMaxInput: string;
-  mobileSliderValues: [number, number];
-  isSidebarOpen: boolean;
-  setIsSidebarOpen: (isOpen: boolean) => void;
-  onMinInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onMaxInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onSliderChange: (values: number[]) => void;
-  onMobileMinInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onMobileMaxInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onMobileSliderChange: (values: number[]) => void;
-  applyMobileFilters: () => void;
-  onSortChange: (sort: SortOption) => void;
-  clearFilter: () => void;
-  clearMobileFilter: () => void;
-};
-
-export function usePriceFilter({
+export function useProductFilter({
   products,
   debounceMs = 300,
-}: Props): UseProductFilter {
+}: UseProductFilterProps) {
+  const { getStateFromURL, updateURL, isInitialized } = useURLState();
+
   const { minPrice, maxPrice } = useMemo(() => {
     if (!products || products.length === 0) {
       return { minPrice: 0, maxPrice: 1000 };
@@ -54,14 +32,14 @@ export function usePriceFilter({
 
     const prices = products
       .map((product) => product.price || 0)
-      .filter((price) => price > 0);
+      .filter((price) => price >= 0);
 
     if (prices.length === 0) {
       return { minPrice: 0, maxPrice: 1000 };
     }
 
     return {
-      minPrice: Math.floor(Math.min(...prices)),
+      minPrice: 0,
       maxPrice: Math.ceil(Math.max(...prices)),
     };
   }, [products]);
@@ -74,6 +52,7 @@ export function usePriceFilter({
   const [maxInput, setMaxInput] = useState(maxPrice.toString());
   const [sortBy, setSortBy] = useState<SortOption>('default');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [hasInitializedFromURL, setHasInitializedFromURL] = useState(false);
 
   const [mobileSliderValues, setMobileSliderValues] = useState<
     [number, number]
@@ -90,39 +69,101 @@ export function usePriceFilter({
     debounceMs
   );
 
-  useEffect(() => {
-    setSliderValues([minPrice, maxPrice]);
-    setMinInput(minPrice.toString());
-    setMaxInput(maxPrice.toString());
+  const debouncedMinInput = useDebounce(minInput, debounceMs);
+  const debouncedMaxInput = useDebounce(maxInput, debounceMs);
 
-    setMobileSliderValues([minPrice, maxPrice]);
-    setMobileMinInput(minPrice.toString());
-    setMobileMaxInput(maxPrice.toString());
-  }, [minPrice, maxPrice]);
+  useEffect(
+    function initializeFromURLOnMount() {
+      if (isInitialized && !hasInitializedFromURL) {
+        const urlState = getStateFromURL();
 
-  useEffect(() => {
-    if (isSidebarOpen) {
-      setMobileSliderValues(sliderValues);
-      setMobileMinInput(minInput);
-      setMobileMaxInput(maxInput);
-    }
-  }, [isSidebarOpen, sliderValues, minInput, maxInput]);
+        setHasInitializedFromURL(true);
+
+        if (urlState.minPrice !== undefined) {
+          setMinInput(urlState.minPrice.toString());
+          setSliderValues((prev) => [urlState.minPrice!, prev[1]]);
+        }
+
+        if (urlState.maxPrice !== undefined) {
+          setMaxInput(urlState.maxPrice.toString());
+          setSliderValues((prev) => [prev[0], urlState.maxPrice!]);
+        }
+
+        if (urlState.sortBy !== undefined) {
+          setSortBy(urlState.sortBy);
+        }
+      }
+    },
+    [isInitialized, hasInitializedFromURL, getStateFromURL]
+  );
+
+  useEffect(
+    function updatePriceRangeWhenProductsChange() {
+      if (!hasInitializedFromURL) {
+        setSliderValues([minPrice, maxPrice]);
+        setMinInput(minPrice.toString());
+        setMaxInput(maxPrice.toString());
+
+        setMobileSliderValues([minPrice, maxPrice]);
+        setMobileMinInput(minPrice.toString());
+        setMobileMaxInput(maxPrice.toString());
+      }
+    },
+    [minPrice, maxPrice, hasInitializedFromURL]
+  );
+
+  useEffect(
+    function syncStateToURL() {
+      if (isInitialized && hasInitializedFromURL) {
+        const currentMin = parseFloat(debouncedMinInput) || minPrice;
+        const currentMax = parseFloat(debouncedMaxInput) || maxPrice;
+
+        updateURL(
+          {
+            minPrice: currentMin,
+            maxPrice: currentMax,
+            sortBy,
+          },
+          minPrice,
+          maxPrice
+        );
+      }
+    },
+    [
+      debouncedMinInput,
+      debouncedMaxInput,
+      sortBy,
+      minPrice,
+      maxPrice,
+      updateURL,
+      isInitialized,
+      hasInitializedFromURL,
+    ]
+  );
+
+  useEffect(
+    function syncMobileFiltersWithDesktopWhenSidebarOpens() {
+      if (isSidebarOpen) {
+        setMobileSliderValues(sliderValues);
+        setMobileMinInput(minInput);
+        setMobileMaxInput(maxInput);
+      }
+    },
+    [isSidebarOpen, sliderValues, minInput, maxInput]
+  );
 
   const onMinInputChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setMinInput(value);
   }, []);
 
-  const onMaxInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setMaxInput(value);
-    },
-    []
-  );
+  const onMaxInputChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMaxInput(value);
+  }, []);
 
   const onMobileMinInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setMobileMinInput(value);
     },
@@ -130,7 +171,7 @@ export function usePriceFilter({
   );
 
   const onMobileMaxInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setMobileMaxInput(value);
     },
@@ -171,15 +212,35 @@ export function usePriceFilter({
     setMinInput(minPrice.toString());
     setMaxInput(maxPrice.toString());
     setSortBy('default');
-  }, [minPrice, maxPrice]);
+
+    updateURL(
+      {
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        sortBy: 'default',
+      },
+      minPrice,
+      maxPrice
+    );
+  }, [minPrice, maxPrice, updateURL]);
 
   const clearMobileFilter = useCallback(() => {
-    setSliderValues([minPrice, maxPrice]);
-    setMinInput(minPrice.toString());
-    setMaxInput(maxPrice.toString());
+    setMobileSliderValues([minPrice, maxPrice]);
+    setMobileMinInput(minPrice.toString());
+    setMobileMaxInput(maxPrice.toString());
     setSortBy('default');
     setIsSidebarOpen(false);
-  }, [minPrice, maxPrice]);
+
+    updateURL(
+      {
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        sortBy: 'default',
+      },
+      minPrice,
+      maxPrice
+    );
+  }, [minPrice, maxPrice, updateURL]);
 
   const isFiltered =
     debouncedMinValue !== minPrice ||
@@ -194,28 +255,19 @@ export function usePriceFilter({
       return price >= debouncedMinValue && price <= debouncedMaxValue;
     });
 
-    switch (sortBy) {
-      case 'price-low':
-        filtered = filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-        break;
-      case 'price-high':
-        filtered = filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-        break;
-      case 'name-asc':
-        filtered = filtered.sort((a, b) =>
-          (a.title || '').localeCompare(b.title || '')
-        );
-        break;
-      case 'name-desc':
-        filtered = filtered.sort((a, b) =>
-          (b.title || '').localeCompare(a.title || '')
-        );
-        break;
-      case 'default':
-      default:
-        filtered = filtered.sort((a, b) => (a.id || 0) - (b.id || 0));
-        break;
-    }
+    const sortFunctions: Record<
+      SortOption,
+      (a: Product, b: Product) => number
+    > = {
+      'price-low': (a, b) => (a.price || 0) - (b.price || 0),
+      'price-high': (a, b) => (b.price || 0) - (a.price || 0),
+      'name-asc': (a, b) => (a.title || '').localeCompare(b.title || ''),
+      'name-desc': (a, b) => (b.title || '').localeCompare(a.title || ''),
+      default: (a, b) => (a.id || 0) - (b.id || 0),
+    };
+
+    const sortFn = sortFunctions[sortBy || 'default'];
+    filtered = filtered.sort(sortFn);
 
     return filtered;
   }, [products, debouncedMinValue, debouncedMaxValue, sortBy]);

@@ -2,8 +2,8 @@
 
 import { ReactNode } from 'react';
 
-import { FilterProvider } from '@/contexts/FilterContext';
 import { Product } from '@/openapi/model/product';
+import { FilterProvider } from '@/providers';
 
 type Props = {
   children: ReactNode;

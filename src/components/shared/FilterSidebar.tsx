@@ -1,6 +1,6 @@
 'use client';
 
-import { useFilterContext } from '@/contexts/FilterContext';
+import { useFilterContext } from '@/providers';
 import { Filter, Sliders, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -62,6 +62,7 @@ export function FilterSidebar() {
                   size="sm"
                   onClick={onClearFilter}
                   className="text-xs h-8 hover:text-primary"
+                  data-testid="clear-price-filter"
                 >
                   Clear All
                 </Button>

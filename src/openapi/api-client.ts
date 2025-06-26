@@ -47,24 +47,3 @@ export const customFetcher = <T>({
       throw error;
     });
 };
-
-apiClient.interceptors.request.use(
-  (config) => {
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Handle unauthorized error
-    }
-    return Promise.reject(error);
-  }
-);

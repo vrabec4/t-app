@@ -1,8 +1,6 @@
-import Image from 'next/image';
-
 import { Product } from '@/openapi/model';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProductCard } from '@/components/shared/ProductCard';
 
@@ -18,11 +16,16 @@ vi.mock('next/image', () => ({
     src,
     alt,
     className,
+    'data-testid': dataTestId,
   }: {
     src: string;
     alt: string;
-    className: string;
-  }) => <Image src={src} alt={alt} className={className} />,
+    className?: string;
+    'data-testid'?: string;
+  }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} className={className} data-testid={dataTestId} />
+  ),
 }));
 
 describe('ProductCard Component', () => {
@@ -34,6 +37,10 @@ describe('ProductCard Component', () => {
     category: 'test',
     image: 'https://test.com/image.jpg',
   };
+
+  beforeEach(() => {
+    mockPush.mockClear();
+  });
 
   it('renders product details correctly', () => {
     render(<ProductCard product={mockProduct} />);
@@ -53,11 +60,12 @@ describe('ProductCard Component', () => {
     expect(image).toHaveAttribute('src', 'https://test.com/image.jpg');
   });
 
-  it('displays "No Image" when product has no image', () => {
+  it('displays placeholder image when product has no image', () => {
     const productWithoutImage = { ...mockProduct, image: undefined };
     render(<ProductCard product={productWithoutImage} />);
 
-    expect(screen.getByText('No Image')).toBeInTheDocument();
+    expect(screen.getByTestId('product-placeholder-image')).toBeInTheDocument();
+    expect(screen.getByAltText('Product placeholder')).toBeInTheDocument();
   });
 
   it('navigates to product details page when button is clicked', () => {

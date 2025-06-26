@@ -37,17 +37,24 @@ export default function ProductDetailPage() {
   });
 
   if (isLoading) {
-    return <ProductsLoader />;
+    return (
+      <>
+        <ProductsLoader />
+      </>
+    );
   }
 
   if (error || !product) {
     return (
-      <ErrorAlert message="Error loading product details. Please try again." />
+      <>
+        <ErrorAlert message="Error loading product details. Please try again." />
+      </>
     );
   }
 
   return (
     <MainLayout>
+      <title>{`Product ${product?.title}`}</title>
       <div className="mb-6">
         <Link href="/products">
           <Button variant="outline" size="sm" className="gap-2">

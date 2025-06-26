@@ -1,6 +1,6 @@
 'use client';
 
-import { useFilterContext } from '@/contexts/FilterContext';
+import { useFilterContext } from '@/providers';
 import { FilterSidebar, PageHeader, ProductCard, SortDropdown } from '@shared';
 import { Alert, AlertDescription, AlertTitle } from '@ui/alert';
 

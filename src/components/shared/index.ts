@@ -6,4 +6,4 @@ export { SortDropdown } from './SortDropdown';
 export { PageHeader } from './PageHeader';
 export { MainLayout } from './MainLayout';
 export { ProductList } from './ProductList';
-export { ProductFilterProvider } from './ProductFilterProvider';
+export { ProductFilterProvider } from '../../providers/ProductFilterProvider';
